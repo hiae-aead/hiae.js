@@ -137,11 +137,12 @@ export class HiAEState {
   }
 
   /**
-   * Diffuse function - performs 32 update rounds
+   * Diffuse function - performs 32 update rounds, alternating between x0 and x1
    */
-  private diffuse(x: Block): void {
-    for (let i = 0; i < 32; i++) {
-      this.update(x);
+  private diffuse(x0: Block, x1: Block): void {
+    for (let i = 0; i < 16; i++) {
+      this.update(x0);
+      this.update(x1);
     }
   }
 
@@ -161,28 +162,24 @@ export class HiAEState {
 
     // Initialize state blocks
     this.state[0] = cloneBlock(C0);
-    this.state[1] = cloneBlock(k1);
-    this.state[2] = cloneBlock(nonce);
-    this.state[3] = cloneBlock(C0);
+    this.state[1] = cloneBlock(k0);
+    this.state[2] = cloneBlock(C0);
+    this.state[3] = cloneBlock(nonce);
     this.state[4] = zeroBlock();
-    this.state[5] = xor(nonce, k0);
+    this.state[5] = cloneBlock(k0);
     this.state[6] = zeroBlock();
     this.state[7] = cloneBlock(C1);
-    this.state[8] = xor(nonce, k1);
+    this.state[8] = cloneBlock(k1);
     this.state[9] = zeroBlock();
-    this.state[10] = cloneBlock(k1);
+    this.state[10] = xor(nonce, k1);
     this.state[11] = cloneBlock(C0);
     this.state[12] = cloneBlock(C1);
     this.state[13] = cloneBlock(k1);
     this.state[14] = zeroBlock();
     this.state[15] = xor(C0, C1);
 
-    // Diffuse with C0
-    this.diffuse(C0);
-
-    // Final XORs
-    xor_inplace(this.state[9], k0);
-    xor_inplace(this.state[13], k1);
+    // Diffuse with k0 and k1
+    this.diffuse(k0, k1);
   }
 
   /**
@@ -235,7 +232,7 @@ export class HiAEState {
     lenBlock.set(LE64(adLenBits), 0);
     lenBlock.set(LE64(msgLenBits), 8);
 
-    this.diffuse(lenBlock);
+    this.diffuse(lenBlock, lenBlock);
 
     // XOR all state blocks to produce tag
     const tag = cloneBlock(this.state[0]);
